@@ -92,15 +92,89 @@ def check_memory():
     return memory
 
 
-def check_cpu_temp():
-    full_cmd = "cat /sys/class/thermal/thermal_zone*/temp 2> /dev/null | sed 's/\\(.\\)..$//' | tail -n 1"
+def check_cpu_temp0():
+    full_cmd = "cat /sys/class/thermal/thermal_zone0/temp 2> /dev/null | sed 's/\\(.\\)..$//' | tail -n 1"
     try:
         p = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-        cpu_temp = p.decode("utf-8").strip()
+        cpu_temp0 = p.decode("utf-8").strip()
     except Exception:
-        cpu_temp = 0
+        cpu_temp0 = 0
 
-    return cpu_temp
+    return cpu_temp0
+
+def check_cpu_temp1():
+    full_cmd = "cat /sys/class/thermal/thermal_zone1/temp 2> /dev/null | sed 's/\\(.\\)..$//' | tail -n 1"
+    try:
+        p = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+        cpu_temp1 = p.decode("utf-8").strip()
+    except Exception:
+        cpu_temp1 = 0
+
+    return cpu_temp1
+
+def check_gpu_temp0():
+    full_cmd = "nvidia-smi --id=0 --query-gpu=temperature.gpu --format=csv,noheader"
+    try:
+        # Run nvidia-smi command to get GPU temperature
+        p = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+
+        # Decode output and strip any extra whitespace or newline characters
+        gpu_temp0 = p.decode('utf-8').strip()
+
+        # Convert temperature to integer (assuming it's a number)
+        # gpu_temp0 = int(gpu_temp0)
+    except Exception:
+        gpu_temp0 = 0
+
+    return gpu_temp0
+
+def check_gpu_temp1():
+    full_cmd = "nvidia-smi --id=1 --query-gpu=temperature.gpu --format=csv,noheader"
+    try:
+        # Run nvidia-smi command to get GPU temperature
+        p = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+
+        # Decode output and strip any extra whitespace or newline characters
+        gpu_temp1 = p.decode('utf-8').strip()
+
+        # Convert temperature to integer (assuming it's a number)
+        # gpu_temp0 = int(gpu_temp0)
+    except Exception:
+        gpu_temp1 = 0
+
+    return gpu_temp1
+
+def check_gpu_temp2():
+    full_cmd = "nvidia-smi --id=2 --query-gpu=temperature.gpu --format=csv,noheader"
+    try:
+        # Run nvidia-smi command to get GPU temperature
+        p = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+
+        # Decode output and strip any extra whitespace or newline characters
+        gpu_temp2 = p.decode('utf-8').strip()
+
+        # Convert temperature to integer (assuming it's a number)
+        # gpu_temp0 = int(gpu_temp0)
+    except Exception:
+        gpu_temp2 = 0
+
+    return gpu_temp2
+
+def check_gpu_temp3():
+    full_cmd = "nvidia-smi --id=3 --query-gpu=temperature.gpu --format=csv,noheader"
+    try:
+        # Run nvidia-smi command to get GPU temperature
+        p = subprocess.Popen(full_cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+
+        # Decode output and strip any extra whitespace or newline characters
+        gpu_temp3 = p.decode('utf-8').strip()
+
+        # Convert temperature to integer (assuming it's a number)
+        # gpu_temp0 = int(gpu_temp0)
+    except Exception:
+        gpu_temp3 = 0
+
+    return gpu_temp3
 
 
 def check_sys_clock_speed():
@@ -203,7 +277,7 @@ def get_mac_address():
     return mac
 
 
-def print_measured_values(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_clock_speed=0, swap=0, memory=0,
+def print_measured_values(cpu_load=0, cpu_temp0=0, cpu_temp1=0, gpu_temp0=0, gpu_temp1=0, gpu_temp2=0, gpu_temp3=0, used_space=0, voltage=0, sys_clock_speed=0, swap=0, memory=0,
                           uptime_days=0, uptime_seconds=0, wifi_signal=0, wifi_signal_dbm=0, rpi5_fan_speed=0):
     remote_version = update.check_git_version_remote(script_dir)
     output = """
@@ -226,7 +300,12 @@ def print_measured_values(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_c
     output += """
 :: Measured values
    CPU Load: {} %
-   CPU Temp: {} °C
+   CPU Temp0: {} °C
+   CPU Temp1: {} °C
+   GPU Temp0: {} °C
+   GPU Temp1: {} °C
+   GPU Temp2: {} °C
+   GPU Temp3: {} °C
    Used Space: {} %
    Voltage: {} V
    CPU Clock Speed: {} MHz
@@ -237,7 +316,7 @@ def print_measured_values(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_c
    Wifi Signal dBm: {}
    RPI5 Fan Speed: {} RPM
    Update: {}
-   """.format(cpu_load, cpu_temp, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, wifi_signal, wifi_signal_dbm, rpi5_fan_speed, check_git_update(script_dir))
+   """.format(cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, wifi_signal, wifi_signal_dbm, rpi5_fan_speed, check_git_update(script_dir))
     output += """Installation directory: {}
 
 :: Release notes {}: 
@@ -305,9 +384,34 @@ def config_json(what_config):
         data["name"] = "CPU Usage"
         data["state_class"] = "measurement"
         data["unit_of_measurement"] = "%"
-    elif what_config == "cputemp":
+    elif what_config == "cputemp0":
         data["icon"] = "hass:thermometer"
-        data["name"] = "CPU Temperature"
+        data["name"] = "CPU 1 Temperature"
+        data["unit_of_measurement"] = "°C"
+        data["state_class"] = "measurement"
+    elif what_config == "cputemp1":
+        data["icon"] = "hass:thermometer"
+        data["name"] = "CPU 2 Temperature"
+        data["unit_of_measurement"] = "°C"
+        data["state_class"] = "measurement"
+    elif what_config == "gputemp0":
+        data["icon"] = "hass:thermometer"
+        data["name"] = "GPU 1 Temperature"
+        data["unit_of_measurement"] = "°C"
+        data["state_class"] = "measurement"
+    elif what_config == "gputemp1":
+        data["icon"] = "hass:thermometer"
+        data["name"] = "GPU 2 Temperature"
+        data["unit_of_measurement"] = "°C"
+        data["state_class"] = "measurement"
+    elif what_config == "gputemp2":
+        data["icon"] = "hass:thermometer"
+        data["name"] = "GPU 3 Temperature"
+        data["unit_of_measurement"] = "°C"
+        data["state_class"] = "measurement"
+    elif what_config == "gputemp3":
+        data["icon"] = "hass:thermometer"
+        data["name"] = "GPU 4 Temperature"
         data["unit_of_measurement"] = "°C"
         data["state_class"] = "measurement"
     elif what_config == "diskusage":
@@ -467,7 +571,7 @@ def publish_update_status_to_mqtt(git_update):
     client.disconnect()
 
 
-def publish_to_mqtt(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_clock_speed=0, swap=0, memory=0,
+def publish_to_mqtt(cpu_load=0, cpu_temp0=0, cpu_temp1=0, gpu_temp0=0, gpu_temp1=0, gpu_temp2=0, gpu_temp3=0, used_space=0, voltage=0, sys_clock_speed=0, swap=0, memory=0,
                     uptime_days=0, uptime_seconds=0, wifi_signal=0, wifi_signal_dbm=0, rpi5_fan_speed=0):
     client = create_mqtt_client()
     if client is None:
@@ -480,11 +584,36 @@ def publish_to_mqtt(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_clock_s
             client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_cpuload/config",
                            config_json('cpuload'), qos=config.qos)
         client.publish(config.mqtt_topic_prefix + "/" + hostname + "/cpuload", cpu_load, qos=config.qos, retain=config.retain)
-    if config.cpu_temp:
+    if config.cpu_temp0:
         if config.discovery_messages:
-            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_cputemp/config",
-                           config_json('cputemp'), qos=config.qos)
-        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/cputemp", cpu_temp, qos=config.qos, retain=config.retain)
+            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_cputemp0/config",
+                           config_json('cputemp0'), qos=config.qos)
+        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/cputemp0", cpu_temp0, qos=config.qos, retain=config.retain)
+    if config.cpu_temp1:
+        if config.discovery_messages:
+            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_cputemp1/config",
+                           config_json('cputemp1'), qos=config.qos)
+        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/cputemp1", cpu_temp1, qos=config.qos, retain=config.retain)
+    if config.gpu_temp0:
+        if config.discovery_messages:
+            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_gputemp0/config",
+                           config_json('gputemp0'), qos=config.qos)
+        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/gputemp0", gpu_temp0, qos=config.qos, retain=config.retain)
+    if config.gpu_temp1:
+        if config.discovery_messages:
+            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_gputemp1/config",
+                           config_json('gputemp1'), qos=config.qos)
+        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/gputemp1", gpu_temp1, qos=config.qos, retain=config.retain)
+    if config.gpu_temp2:
+        if config.discovery_messages:
+            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_gputemp2/config",
+                           config_json('gputemp2'), qos=config.qos)
+        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/gputemp2", gpu_temp2, qos=config.qos, retain=config.retain)
+    if config.gpu_temp3:
+        if config.discovery_messages:
+            client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_gputemp3/config",
+                           config_json('gputemp3'), qos=config.qos)
+        client.publish(config.mqtt_topic_prefix + "/" + hostname + "/gputemp3", gpu_temp3, qos=config.qos, retain=config.retain)
     if config.used_space:
         if config.discovery_messages:
             client.publish("homeassistant/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_diskusage/config",
@@ -563,11 +692,11 @@ def publish_to_mqtt(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_clock_s
     client.disconnect()
 
 
-def bulk_publish_to_mqtt(cpu_load=0, cpu_temp=0, used_space=0, voltage=0, sys_clock_speed=0, swap=0, memory=0,
+def bulk_publish_to_mqtt(cpu_load=0, cpu_temp0=0, cpu_temp1=0,gpu_temp0=0, gpu_temp1=0, gpu_temp2=0, gpu_temp3=0, used_space=0, voltage=0, sys_clock_speed=0, swap=0, memory=0,
                          uptime_days=0, uptime_seconds=0, wifi_signal=0, wifi_signal_dbm=0, rpi5_fan_speed=0, git_update=0):
     # compose the CSV message containing the measured values
 
-    values = cpu_load, cpu_temp, used_space, voltage, int(sys_clock_speed), swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed, git_update
+    values = cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, int(sys_clock_speed), swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed, git_update
     values = str(values)[1:-1]
 
     client = create_mqtt_client()
@@ -638,12 +767,22 @@ def parse_arguments():
 
 
 def collect_monitored_values():
-    cpu_load = cpu_temp = used_space = voltage = sys_clock_speed = swap = memory = uptime_seconds = uptime_days = wifi_signal = wifi_signal_dbm = rpi5_fan_speed = False
+    cpu_load = cpu_temp0 = cpu_temp1 = gpu_temp0 = gpu_temp1 = gpu_temp2 = gpu_temp3 = used_space = voltage = sys_clock_speed = swap = memory = uptime_seconds = uptime_days = wifi_signal = wifi_signal_dbm = rpi5_fan_speed = False
 
     if config.cpu_load:
         cpu_load = check_cpu_load()
-    if config.cpu_temp:
-        cpu_temp = check_cpu_temp()
+    if config.cpu_temp0:
+        cpu_temp0 = check_cpu_temp0()
+    if config.cpu_temp1:
+        cpu_temp1 = check_cpu_temp1()
+    if config.gpu_temp0:
+        gpu_temp0 = check_gpu_temp0()
+    if config.gpu_temp1:
+        gpu_temp1 = check_gpu_temp1()
+    if config.gpu_temp2:
+        gpu_temp2 = check_gpu_temp2()
+    if config.gpu_temp3:
+        gpu_temp3 = check_gpu_temp3()  
     if config.used_space:
         used_space = check_used_space(config.used_space_path)
     if config.voltage:
@@ -665,23 +804,23 @@ def collect_monitored_values():
     if config.rpi5_fan_speed:
         rpi5_fan_speed = check_rpi5_fan_speed()
 
-    return cpu_load, cpu_temp, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed
+    return cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed
 
 
 def gather_and_send_info():
     while not stop_event.is_set():
-        cpu_load, cpu_temp, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed = collect_monitored_values()
+        cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed = collect_monitored_values()
 
         if hasattr(config, 'random_delay'):
             time.sleep(config.random_delay)
 
         if args.display:
-            print_measured_values(cpu_load, cpu_temp, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed)
+            print_measured_values(cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed)
 
         if hasattr(config, 'group_messages') and config.group_messages:
-            bulk_publish_to_mqtt(cpu_load, cpu_temp, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed)
+            bulk_publish_to_mqtt(cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed)
         else:
-            publish_to_mqtt(cpu_load, cpu_temp, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed)
+            publish_to_mqtt(cpu_load, cpu_temp0, cpu_temp1, gpu_temp0, gpu_temp1, gpu_temp2, gpu_temp3, used_space, voltage, sys_clock_speed, swap, memory, uptime_days, uptime_seconds, wifi_signal, wifi_signal_dbm, rpi5_fan_speed)
 
         if not args.service:
             break
