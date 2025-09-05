@@ -83,6 +83,7 @@ memory = True
 uptime = True
 uptime_seconds = False
 net_io = True
+gpu_temps = True  # enable dynamic NVIDIA GPU sensors
 
 # Check storage devices temperatures - experimental feature, disabled by default
 drive_temps = False
