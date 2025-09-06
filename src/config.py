@@ -4,12 +4,12 @@ from random import randrange
 version = "0.6.3"
 
 # MQTT server configuration
-mqtt_host = "ip address or host"
-mqtt_user = "username"
-mqtt_password = "password"
+mqtt_host = "10.119.35.140"
+mqtt_user = ""
+mqtt_password = ""
 mqtt_port = "1883"
 mqtt_discovery_prefix = "homeassistant"
-mqtt_topic_prefix = "rpi-MQTT-monitor"
+mqtt_topic_prefix = "intel-5080"
 mqtt_uns_structure = ""
 
 # Retain flag for published topics
