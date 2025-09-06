@@ -29,6 +29,62 @@ if config.ext_sensors:
     import ds18b20
     from sht21 import SHT21
 
+def _run_gpu_cmd(cmd):
+    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    out, err = p.communicate()
+    if p.returncode != 0:
+        raise RuntimeError(err.strip())
+    return out
+
+def read_nvidia_gpus():
+    # Detect NVIDIA GPUs and return a list of dicts:
+    #   [{"index": 0, "name": "NVIDIA ...", "temperature": 54}, ...]
+    # Prefers NVML (pynvml) and falls back to nvidia-smi.
+    # Returns [] if not available.
+    # --- Try NVML first ---
+    try:
+        import pynvml  # pip install nvidia-ml-py3
+        pynvml.nvmlInit()
+        try:
+            count = pynvml.nvmlDeviceGetCount()
+            gpus = []
+            for i in range(count):
+                h = pynvml.nvmlDeviceGetHandleByIndex(i)
+                # handle name differences across pynvml versions
+                try:
+                    name = pynvml.nvmlDeviceGetName(h).decode("utf-8")
+                except AttributeError:
+                    name = str(pynvml.nvmlDeviceGetName(h))
+                temp = pynvml.nvmlDeviceGetTemperature(h, pynvml.NVML_TEMPERATURE_GPU)
+                gpus.append({"index": int(i), "name": name, "temperature": int(temp)})
+            return gpus
+        finally:
+            pynvml.nvmlShutdown()
+    except Exception:
+        pass
+
+    # --- Fallback to nvidia-smi ---
+    try:
+        # Query index, name, temperature in a CSV without header/units for robust parsing
+        out = _run_gpu_cmd(
+            "nvidia-smi --query-gpu=index,name,temperature.gpu --format=csv,noheader,nounits"
+        )
+        gpus = []
+        for line in out.strip().splitlines():
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 3:
+                idx = int(parts[0])
+                # name could contain commas; join middle pieces
+                name = ",".join(parts[1:-1]).strip()
+                try:
+                    temp = int(parts[-1])
+                except ValueError:
+                    temp = None
+                gpus.append({"index": idx, "name": name, "temperature": temp})
+        return gpus
+    except Exception:
+        return []
+
 
 configlanguage = configparser.ConfigParser()
 configlanguage.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'translations.ini'))
@@ -419,6 +475,16 @@ def print_measured_values(monitored_values):
         if key in monitored_values:
             output += f"   {label}: {monitored_values[key]} {unit}\n"
 
+
+    # Print dynamic NVIDIA GPUs
+    if hasattr(config, 'gpu_temps') and config.gpu_temps:
+        gpus = read_nvidia_gpus()
+        if len(gpus) > 0:
+            for g in gpus:
+                t = g.get('temperature')
+                name = g.get('name', 'NVIDIA GPU')
+                output += f"   GPU{g['index']} Temp: {t if t is not None else 'N/A'}°C ({name})\n"
+
     if config.drive_temps:
         drive_temps = check_all_drive_temps()
         if len(drive_temps) > 0:
@@ -567,6 +633,14 @@ def handle_specific_configurations(data, what_config, device):
         add_common_attributes(data, "mdi:flash", get_translation("rpi_power_status"))
     elif what_config == "apt_updates":
         add_common_attributes(data, "mdi:update", get_translation("apt_updates"))
+
+    elif what_config == "gpu_temperature":
+        # Dynamic GPU temperature sensor (device = GPU index as string)
+        add_common_attributes(data, "hass:thermometer", f"GPU {device} " + get_translation("temperature"), "°C", "temperature", "measurement")
+        # Override to include GPU index in state_topic/unique_id
+        data["state_topic"] = f"{config.mqtt_uns_structure}{config.mqtt_topic_prefix}/{hostname}/gpu/{device}/temperature"
+        data["unique_id"] = f"{hostname}_gpu{device}_temperature"
+
     elif what_config == "ds18b20_status":
         add_common_attributes(data, "hass:thermometer", device + " " + get_translation("temperature"), "°C", "temperature", "measurement")
         data["state_topic"] = config.mqtt_uns_structure + config.mqtt_topic_prefix + "/" + hostname + "/" + what_config + "_" + device
@@ -788,6 +862,22 @@ def publish_to_mqtt(monitored_values):
                 
     status_sensor_topic = config.mqtt_discovery_prefix + "/sensor/" + config.mqtt_topic_prefix + "/" + hostname + "_status/config"
     client.publish(status_sensor_topic, config_json('status'), qos=config.qos)
+
+    # Dynamic NVIDIA GPU temperatures
+    if monitored_values.get('gpu_list') is not None:
+        for g in monitored_values['gpu_list']:
+            idx = str(g.get('index', '0'))
+            temp = g.get('temperature')
+            if config.discovery_messages:
+                client.publish(
+                    f"{config.mqtt_discovery_prefix}/sensor/{config.mqtt_topic_prefix}/{hostname}_gpu{idx}_temperature/config",
+                    config_json('gpu_temperature', device=idx),
+                    qos=config.qos
+                )
+            state_topic = f"{config.mqtt_uns_structure}{config.mqtt_topic_prefix}/{hostname}/gpu/{idx}/temperature"
+            if config.use_availability:
+                client.publish(f"{state_topic}_availability", 'offline' if temp is None else 'online', qos=config.qos)
+            client.publish(state_topic, temp if temp is not None else 0, qos=config.qos, retain=config.retain)
     client.publish(config.mqtt_uns_structure + config.mqtt_topic_prefix + "/" + hostname + "/status", "1", qos=config.qos, retain=config.retain)
 
     if "data_sent" in monitored_values:
@@ -924,6 +1014,11 @@ def collect_monitored_values():
         data_sent, data_received = get_network_data()
         monitored_values["data_sent"] = data_sent
         monitored_values["data_received"] = data_received
+
+    # Dynamic GPU temps (enable by setting gpu_temps=True in config.py)
+    if hasattr(config, 'gpu_temps') and config.gpu_temps:
+        monitored_values["gpu_list"] = read_nvidia_gpus()
+
 
     return monitored_values
 
